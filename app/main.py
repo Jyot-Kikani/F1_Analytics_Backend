@@ -13,7 +13,7 @@ app = FastAPI()
 # CORS: allow local frontend dev on port 3000
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://analytics-f1.vercel.app/"],
+    allow_origins=["http://localhost:3000", "https://analytics-f1.vercel.app"],
     allow_methods=["GET"],
     allow_headers=["*"],
 )
