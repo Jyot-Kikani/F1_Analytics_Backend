@@ -55,7 +55,6 @@ def get_drivers(year: int, gp: str, session: str):
         
         # Use results data instead of laps
         for _, driver_result in sess.results.iterrows():
-            # try:
                 abbr = driver_result['Abbreviation']
                 
                 # Create driver info object
@@ -63,21 +62,12 @@ def get_drivers(year: int, gp: str, session: str):
                     abbreviation=abbr,
                     full_name=driver_result['FullName'] if 'FullName' in driver_result else abbr,
                     team=driver_result['TeamName'] if 'TeamName' in driver_result else "Unknown",
-                    team_color=driver_result['TeamColor'] if 'TeamColor' in driver_result else "#FFFFFF",
+                    team_color=("#" + driver_result['TeamColor']) if 'TeamColor' in driver_result else "#FFFFFF",
                     headshot_url=driver_result['HeadshotUrl'] if 'HeadshotUrl' in driver_result else None
                 )
                 drivers_info.append(driver_info)
-            # except Exception:
-            #     # Fallback with minimal info if driver details can't be retrieved
-            #     drivers_info.append(DriverInfo(
-            #         abbreviation=abbr if 'abbr' in locals() else "Unknown",
-            #         full_name=abbr if 'abbr' in locals() else "Unknown",
-            #         team="Unknown",
-            #         team_color="#FFFFFF",
-            #         headshot_url=None
-            #     ))
         
-        return sorted(drivers_info, key=lambda x: x.full_name)
+        return sorted(drivers_info, key=lambda x: x.team)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load session: {str(e)}")
 
