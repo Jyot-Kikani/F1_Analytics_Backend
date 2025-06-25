@@ -97,8 +97,8 @@ def get_laptimes(year: int, gp: str, session: str, drivers: str = Query("")):
 
             result[driver] = [
                 {
-                    "lap_number": int(row["LapNumber"]),
-                    "lap_time_seconds": row["LapTime"].total_seconds() if not pd.isnull(row["LapTime"]) else None
+                    "lap_num": int(row["LapNumber"]),
+                    "time": row["LapTime"].total_seconds() if not pd.isnull(row["LapTime"]) else None
                 }
                 for _, row in dr_laps.iterrows()
                 if not pd.isnull(row["LapTime"])
