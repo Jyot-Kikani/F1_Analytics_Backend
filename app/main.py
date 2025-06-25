@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
-from f1loader import load_session
+from .f1loader import load_session
 import fastf1
 from fastapi import Query
 from pydantic import BaseModel
@@ -13,11 +13,14 @@ app = FastAPI()
 # CORS: allow local frontend dev on port 3000
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "https://analytics-f1.vercel.app/"],
     allow_methods=["GET"],
     allow_headers=["*"],
 )
 
+@app.get("/")
+def root():
+    return {"message": "F1 backend running"}
 
 @app.get("/api/years", response_model=List[int])
 def get_years():
