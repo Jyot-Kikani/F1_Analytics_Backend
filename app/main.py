@@ -1,14 +1,19 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Dict, Optional
 from .f1loader import load_session
 import fastf1
+from fastf1.core import Session
 from fastapi import Query
 from pydantic import BaseModel
 import pandas as pd
 from typing import Optional, List
+from datetime import datetime
 
 app = FastAPI()
+
+# Global cache: {(year, gp, session): FastF1 Session object}
+session_cache: Dict[tuple, Session] = {}
 
 # CORS: allow local frontend dev on port 3000
 app.add_middleware(
@@ -22,25 +27,29 @@ app.add_middleware(
 def root():
     return {"message": "F1 backend running"}
 
+# To get the list of years available in the F1 dataset
 @app.get("/api/years", response_model=List[int])
 def get_years():
-    return [2021, 2022, 2023, 2024, 2025]
+    current_year = datetime.now().year
+    return list(range(2018, current_year + 1))
 
-
+# To get the list of races for a specific year
 @app.get("/api/races/{year}", response_model=List[str])
 def get_races(year: int):
     try:
         schedule = fastf1.get_event_schedule(year)
+        schedule = schedule[["EventName"]]
     except Exception:
         raise HTTPException(status_code=404, detail="Invalid year or data unavailable")
 
     return list(schedule['EventName'].unique())
 
-
+# To get the list of sessions for a specific event
 @app.get("/api/sessions/{year}/{gp}", response_model=List[str])
 def get_sessions(year: int, gp: str):
-    # Can improve to add Sprints later.
-    return ["FP1", "FP2", "FP3", "Qualifying", "Sprint", "Race"]
+    event = fastf1.get_event(year, gp)
+    event = event[["Session1", "Session2", "Session3", "Session4", "Session5"]]
+    return event.dropna().values.flatten().tolist()
 
 
 class DriverInfo(BaseModel):
@@ -53,7 +62,7 @@ class DriverInfo(BaseModel):
 @app.get("/api/drivers/{year}/{gp}/{session}", response_model=List[DriverInfo])
 def get_drivers(year: int, gp: str, session: str):
     try:
-        sess = load_session(year, gp, session)
+        sess = get_or_load_session(year, gp, session)
         drivers_info = []
         
         # Use results data instead of laps
@@ -89,7 +98,7 @@ def get_laptimes(year: int, gp: str, session: str, drivers: str = Query("")):
         if not driver_list:
             return {}
             
-        sess = load_session(year, gp, session)
+        sess = get_or_load_session(year, gp, session)
         laps = sess.laps
         result = {}
 
@@ -110,3 +119,11 @@ def get_laptimes(year: int, gp: str, session: str, drivers: str = Query("")):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing lap times: {str(e)}")
+    
+def get_or_load_session(year: int, gp: str, session: str) -> Session:
+    key = (year, gp.lower(), session.lower())
+    if key not in session_cache:
+        sess = fastf1.get_session(year, gp, session)
+        sess.load()
+        session_cache[key] = sess
+    return session_cache[key]
